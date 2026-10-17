@@ -1,4 +1,5 @@
 import os
+from urllib.parse import quote
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -9,6 +10,12 @@ MUSTARD = "#E1AD01"   # 머스타드 옐로우
 TEAL = "#008B8B"      # 청록색
 DEEP_TEAL = "#005F5F"
 CREAM = "#FFFBEF"
+# 이모지(🧦)를 SVG 이미지로 만들어 마우스 커서로 사용
+_SOCK_SVG = (
+    "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'>"
+    "<text x='0' y='26' font-size='26'>🧦</text></svg>"
+)
+SOCK_CURSOR = f'url("data:image/svg+xml,{quote(_SOCK_SVG)}") 16 16, pointer'
 FONT = "Jua"  # 둥글둥글 귀여운 한글 폰트 (Google Fonts)
 
 CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seoul_temperature.csv")
@@ -28,6 +35,13 @@ st.markdown(
     [data-testid="stCaptionContainer"], [data-testid="stSlider"] *,
     [data-testid="stExpander"] summary p {{
         font-family: '{FONT}', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif !important;
+    }}
+    /* 그래프 위에서 커서를 양말 모양으로 */
+    [data-testid="stPlotlyChart"],
+    [data-testid="stPlotlyChart"] .draglayer *,
+    [data-testid="stPlotlyChart"] .nsewdrag,
+    [data-testid="stPlotlyChart"] .main-svg {{
+        cursor: {SOCK_CURSOR} !important;
     }}
     [data-testid="stSidebar"] {{ background-color: {TEAL}; }}
     [data-testid="stSidebar"] * {{ color: #FFFFFF !important; }}
