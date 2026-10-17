@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -29,21 +30,50 @@ st.markdown(
 
 # ---------- 데이터 로드 ----------
 @st.cache_data
-def load_data(path: str) -> pd.DataFrame:
-    # utf-8-sig: 문서 앞부분의 BOM(﻿) 처리
-    df = pd.read_csv(path, encoding="utf-8-sig", dtype={"날짜": str})
-
+def load_data(content: str) -> pd.DataFrame:
+    from io import StringIO
+    df = pd.read_csv(
+        StringIO(content),
+        dtype={"날짜": str},
+        on_bad_lines="skip",
+    )
     # 날짜 값 앞의 탭 문자 등 공백 제거
     df["날짜"] = df["날짜"].str.strip()
     df["날짜"] = pd.to_datetime(df["날짜"], format="%Y-%m-%d")
-
     for col in ["평균기온(℃)", "최저기온(℃)", "최고기온(℃)"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
-
     df["연도"] = df["날짜"].dt.year
     return df
 
-df = load_data("seoul_temperature.csv")
+# ---------- 파일 읽기 ----------
+uploaded = st.file_uploader(
+    "CSV 파일 업로드",
+    type="csv",
+    help="파일을 올리지 않으면 같은 폴더의 seoul_temperature.csv를 자동 사용합니다.",
+)
+
+if uploaded is not None:
+    raw = uploaded.read()
+    try:
+        content = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        content = raw.decode("cp949")
+    df = load_data(content)
+elif os.path.exists("seoul_temperature.csv"):
+    with open("seoul_temperature.csv", "rb") as f:
+        raw = f.read()
+    try:
+        content = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        content = raw.decode("cp949")
+    df = load_data(content)
+else:
+    st.warning(
+        "CSV 파일이 없습니다. Streamlit Cloud에서는 파일 업로드 기능을 사용하거나, "
+        "로컬 실행 시 seoul_temperature.csv를 앱 파일과 같은 폴더에 넣어 주세요."
+    )
+    st.stop()
+
 TEMP_COLS = ["평균기온(℃)", "최저기온(℃)", "최고기온(℃)"]
 
 # ---------- 연도별 결측치 집계 ----------
@@ -74,13 +104,13 @@ st.sidebar.title("🌡️ 서울 기온 분석")
 st.sidebar.markdown("---")
 st.sidebar.markdown("**분석 대상 연도**")
 
-year_min, year_max = int(annual["연도"].min()), int(annual["연도"].max())
+year_min = int(annual["연도"].min())
+year_max = int(annual["연도"].max())
 year_range = st.sidebar.slider(
     "연도 범위",
     min_value=year_min,
     max_value=year_max,
     value=(year_min, year_max),
-    format_func=lambda y: f"{y}년",
 )
 
 # ---------- 선택 구간 통계 ----------
@@ -144,9 +174,7 @@ with c2:
         st.markdown(f"| {k} | {v:,.1f} |", unsafe_allow_html=True)
     st.markdown(f"**선택 연도 수**: {len(sel)}년")
     if excluded_years:
-        st.warning(
-            f"결측치 20개 이상 연도 → 분석에서 제외: {excluded_years}"
-        )
+        st.warning(f"결측치 20개 이상 연도 → 분석에서 제외: {excluded_years}")
 
 # ---------- 상세 데이터 표 ----------
 st.markdown("### 📋 연도별 상세 데이터")
