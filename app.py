@@ -9,6 +9,7 @@ MUSTARD = "#E1AD01"   # 머스타드 옐로우
 TEAL = "#008B8B"      # 청록색
 DEEP_TEAL = "#005F5F"
 CREAM = "#FFFBEF"
+FONT = "Jua"  # 둥글둥글 귀여운 한글 폰트 (Google Fonts)
 
 CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "seoul_temperature.csv")
 MISSING_LIMIT = 20    # 결측치가 이 개수 이상인 연도는 제외
@@ -16,11 +17,18 @@ MA_WINDOW = 5         # 이동평균 기간(년)
 
 COL_DATE, COL_AVG, COL_MIN, COL_MAX = "날짜", "평균기온(℃)", "최저기온(℃)", "최고기온(℃)"
 
-st.set_page_config(page_title="서울 기온 분석", page_icon="🌡️", layout="wide")
+st.set_page_config(page_title="서울 기온 분석", page_icon="🧦", layout="wide")
 
 st.markdown(
     f"""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+    html, body, .stApp, .stMarkdown, p, h1, h2, h3, h4, label, button, input,
+    [data-testid="stMetricLabel"], [data-testid="stMetricValue"],
+    [data-testid="stCaptionContainer"], [data-testid="stSlider"] *,
+    [data-testid="stExpander"] summary p {{
+        font-family: '{FONT}', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif !important;
+    }}
     [data-testid="stSidebar"] {{ background-color: {TEAL}; }}
     [data-testid="stSidebar"] * {{ color: #FFFFFF !important; }}
     h1, h2, h3 {{ color: {DEEP_TEAL}; }}
@@ -85,7 +93,7 @@ st.sidebar.caption(
 )
 
 # ---------- 본문 ----------
-st.title("🦗 서울 연도별 기온 분석")
+st.title("🧦 서울 연도별 기온 분석")
 
 sel_year = yearly.loc[start:end]
 sel_daily = clean[(clean["연도"] >= start) & (clean["연도"] <= end)]
@@ -129,6 +137,7 @@ fig.update_layout(
     plot_bgcolor=CREAM, paper_bgcolor="white", hovermode="x unified",
     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     height=520,
+    font=dict(family=f"{FONT}, Malgun Gothic, sans-serif", size=14),
 )
 fig.update_xaxes(gridcolor="#EFE6C8")
 fig.update_yaxes(gridcolor="#EFE6C8")
