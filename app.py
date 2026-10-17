@@ -85,7 +85,7 @@ st.sidebar.caption(
 )
 
 # ---------- 본문 ----------
-st.title("🌡️ 서울 연도별 기온 분석")
+st.title("🦗 서울 연도별 기온 분석")
 
 sel_year = yearly.loc[start:end]
 sel_daily = clean[(clean["연도"] >= start) & (clean["연도"] <= end)]
