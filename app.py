@@ -76,18 +76,20 @@ else:
 
 TEMP_COLS = ["평균기온(℃)", "최저기온(℃)", "최고기온(℃)"]
 
-# ---------- 연도별 결측치 집계 ----------
-# 연도별로 온도 3개 컬럼 중 하나라도 결측인 행 수를 집계
-missing_per_year = (
-    df[df[TEMP_COLS].isnull().any(axis=1)]
-    .groupby("연도")
-    .size()
+# ---------- 연도별 결측치 집계 (결측 셀 기준: 온도 3개 컬럼의 빈칸 수) ----------
+raw_year_min = int(df["연도"].min())
+raw_year_max = int(df["연도"].max())
+missing_cells_per_year = (
+    df.groupby("연도")[TEMP_COLS]
+    .isnull()
+    .sum()
+    .sum(axis=1)
 )
 
 # 결측치 20개 이상인 연도는 분석·그래프에서 제외
-excluded_years = missing_per_year[missing_per_year >= 20].index.tolist()
-valid_years = missing_per_year[missing_per_year < 20].index.tolist()
-df = df[df["연도"].isin(valid_years)]
+excluded_years = missing_cells_per_year[missing_cells_per_year >= 20]
+valid_years = missing_cells_per_year[missing_cells_per_year < 20]
+df = df[df["연도"].isin(valid_years.index)]
 
 # ---------- 연평균 & 5년 이동평균 ----------
 annual = (
@@ -96,14 +98,22 @@ annual = (
     .reset_index()
     .sort_values("연도")
 )
-# 5년 이동평균 (처음 4개 연도는 사용 가능 데이터만으로 계산)
 annual["5년이동평균"] = annual["평균기온(℃)"].rolling(window=5, min_periods=1).mean()
 
-# ---------- 사이드바 ----------
-st.sidebar.title("🌡️ 서울 기온 분석")
-st.sidebar.markdown("---")
-st.sidebar.markdown("**분석 대상 연도**")
+# ---------- 데이터 진단 (사이드바에서 확인 가능) ----------
+with st.sidebar.expander("📦 데이터 진단"):
+    st.write(f"원본 데이터 행 수: {len(df)}")
+    st.write(f"연도 범위: {raw_year_min}~{raw_year_max}년")
+    st.write("연도별 행 수:")
+    st.write(df.groupby("연도").size().to_dict())
+    st.write("연도별 결측(셀) 수:")
+    st.write(missing_cells_per_year.to_dict())
+    st.write("제외된 연도(결측 20개 이상):", excluded_years.index.tolist())
+    st.write("분석 대상 연도:", sorted(valid_years.index.tolist()))
+    st.write("분석 대상 연도 목록:")
+    st.write(annual[["연도", "평균기온(℃)", "5년이동평균"]])
 
+# ---------- 연도 범위 ----------
 year_min = int(annual["연도"].min())
 year_max = int(annual["연도"].max())
 year_range = st.sidebar.slider(
@@ -111,10 +121,18 @@ year_range = st.sidebar.slider(
     min_value=year_min,
     max_value=year_max,
     value=(year_min, year_max),
+    key="year_range",
+    help="그래프를 볼 연도 범위를 선택하세요.",
 )
 
+# ---------- 전체 연도로 초기화 ----------
+if st.sidebar.button("전체 연도로 되돌리기", key="reset_year"):
+    st.session_state["year_range"] = (year_min, year_max)
+
 # ---------- 선택 구간 통계 ----------
-sel = annual[(annual["연도"] >= year_range[0]) & (annual["연도"] <= year_range[1])]
+sel = annual[
+    (annual["연도"] >= year_range[0]) & (annual["연도"] <= year_range[1])
+]
 metrics = {
     "평균기온": sel["평균기온(℃)"].mean(),
     "최저기온": sel["최저기온(℃)"].mean(),
@@ -125,7 +143,7 @@ metrics = {
 st.title("서울 연평균기온 분석")
 st.markdown(
     f"데이터: {len(df)}개 관측치 | 분석 대상 연도: {year_min}~{year_max}년 | "
-    f"제외 연도(결측 20일 이상): {excluded_years if excluded_years else '없음'}"
+    f"제외 연도(결측 20개 이상): {excluded_years.index.tolist() if len(excluded_years) else '없음'}"
 )
 
 c1, c2 = st.columns([3, 1])
@@ -173,8 +191,8 @@ with c2:
     for k, v in metrics.items():
         st.markdown(f"| {k} | {v:,.1f} |", unsafe_allow_html=True)
     st.markdown(f"**선택 연도 수**: {len(sel)}년")
-    if excluded_years:
-        st.warning(f"결측치 20개 이상 연도 → 분석에서 제외: {excluded_years}")
+    if len(excluded_years):
+        st.warning(f"결측치 20개 이상 연도 → 분석에서 제외: {excluded_years.index.tolist()}")
 
 # ---------- 상세 데이터 표 ----------
 st.markdown("### 📋 연도별 상세 데이터")
